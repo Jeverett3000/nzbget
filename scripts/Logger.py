@@ -50,7 +50,7 @@ POSTPROCESS_NONE=95
 POSTPROCESS_ERROR=94
 
 # Check if the script is called from nzbget 15.0 or later
-if not 'NZBOP_NZBLOG' in os.environ:
+if 'NZBOP_NZBLOG' not in os.environ:
 	print('*** NZBGet post-processing script ***')
 	print('This script is supposed to be called from nzbget (15.0 or later).')
 	sys.exit(POSTPROCESS_ERROR)
@@ -74,7 +74,7 @@ password = os.environ['NZBOP_CONTROLPASSWORD'];
 if host == '0.0.0.0': host = '127.0.0.1'
 
 # Build a URL for XML-RPC requests
-rpcUrl = 'http://%s:%s@%s:%s/xmlrpc' % (quote(username), quote(password), host, port);
+rpcUrl = f'http://{quote(username)}:{quote(password)}@{host}:{port}/xmlrpc';
 
 # Create remote server object
 server = ServerProxy(rpcUrl)
@@ -85,11 +85,9 @@ log = server.loadlog(nzbid, 0, 10000)
 
 # Now iterate through entries and save them to the output file
 if len(log) > 0:
-	f = open('%s/_nzblog.txt' % os.environ['NZBPP_DIRECTORY'], 'wb')
-	for entry in log:
-		f.write((u'%s\t%s\t%s\n' % (entry['Kind'], datetime.datetime.fromtimestamp(int(entry['Time'])), entry['Text'])).encode('utf8'))
-	f.close()
-
+	with open(f"{os.environ['NZBPP_DIRECTORY']}/_nzblog.txt", 'wb') as f:
+		for entry in log:
+			f.write((u'%s\t%s\t%s\n' % (entry['Kind'], datetime.datetime.fromtimestamp(int(entry['Time'])), entry['Text'])).encode('utf8'))
 # All OK, returning exit status 'POSTPROCESS_SUCCESS' (int <93>) to let NZBGet know
 # that our script has successfully completed.
 sys.exit(POSTPROCESS_SUCCESS)

@@ -107,7 +107,7 @@ POSTPROCESS_ERROR=94
 POSTPROCESS_NONE=95
 
 # Check if the script is called from nzbget 15.0 or later
-if not 'NZBOP_NZBLOG' in os.environ:
+if 'NZBOP_NZBLOG' not in os.environ:
 	print('*** NZBGet post-processing script ***')
 	print('This script is supposed to be called from nzbget (15.0 or later).')
 	sys.exit(POSTPROCESS_ERROR)
@@ -116,20 +116,22 @@ print('[DETAIL] Script successfully started')
 sys.stdout.flush()
 
 required_options = ('NZBPO_FROM', 'NZBPO_TO', 'NZBPO_SERVER', 'NZBPO_PORT', 'NZBPO_ENCRYPTION', 'NZBPO_USERNAME', 'NZBPO_PASSWORD')
-for	optname in required_options:
-	if (not optname in os.environ):
-		print('[ERROR] Option %s is missing in configuration file. Please check script settings' % optname[6:])
+for optname in required_options:
+	if optname not in os.environ:
+		print(
+			f'[ERROR] Option {optname[6:]} is missing in configuration file. Please check script settings'
+		)
 		sys.exit(POSTPROCESS_ERROR)
 
 # Check if the script is executed from settings page with a custom command
 command = os.environ.get('NZBCP_COMMAND')
 test_mode = command == 'ConnectionTest'
 if command != None and not test_mode:
-	print('[ERROR] Invalid command ' + command)
+	print(f'[ERROR] Invalid command {command}')
 	sys.exit(POSTPROCESS_ERROR)
 
-status = os.environ.get('NZBPP_STATUS') if not test_mode else 'SUCCESS/ALL'
-total_status = os.environ.get('NZBPP_TOTALSTATUS') if not test_mode else 'SUCCESS'
+status = 'SUCCESS/ALL' if test_mode else os.environ.get('NZBPP_STATUS')
+total_status = 'SUCCESS' if test_mode else os.environ.get('NZBPP_TOTALSTATUS')
 
 # If any script fails the status of the item in the history is "WARNING/SCRIPT".
 # This status however is not passed to pp-scripts in the env var "NZBPP_STATUS"
@@ -147,11 +149,13 @@ if success and os.environ.get('NZBPO_SENDMAIL') == 'OnFailure' and not test_mode
 	sys.exit(POSTPROCESS_NONE)
 
 if success:
-	subject = 'Success for "%s"' % (os.environ.get('NZBPP_NZBNAME', 'Test download'))
-	text = 'Download of "%s" has successfully completed.' % (os.environ.get('NZBPP_NZBNAME', 'Test download'))
+	subject = (
+		f"""Success for "{os.environ.get('NZBPP_NZBNAME', 'Test download')}\""""
+	)
+	text = f"""Download of "{os.environ.get('NZBPP_NZBNAME', 'Test download')}" has successfully completed."""
 else:
-	subject = 'Failure for "%s"' % (os.environ['NZBPP_NZBNAME'])
-	text = 'Download of "%s" has failed.' % (os.environ['NZBPP_NZBNAME'])
+	subject = f"""Failure for "{os.environ['NZBPP_NZBNAME']}\""""
+	text = f"""Download of "{os.environ['NZBPP_NZBNAME']}" has failed."""
 
 text += '\nStatus: %s' % status
 
@@ -172,7 +176,7 @@ if (os.environ.get('NZBPO_STATISTICS') == 'yes' or \
 	if host == '0.0.0.0': host = '127.0.0.1'
 
 	# Build a URL for XML-RPC requests
-	rpcUrl = 'http://%s:%s@%s:%s/xmlrpc' % (quote(username), quote(password), host, port);
+	rpcUrl = f'http://{quote(username)}:{quote(password)}@{host}:{port}/xmlrpc';
 
 	# Create remote server object
 	server = ServerProxy(rpcUrl)
@@ -232,7 +236,7 @@ if os.environ.get('NZBPO_FILELIST') == 'yes' and not test_mode:
 
 # add _brokenlog.txt (if exists)
 if os.environ.get('NZBPO_BROKENLOG') == 'yes' and not test_mode:
-	brokenlog = '%s/_brokenlog.txt' % os.environ['NZBPP_DIRECTORY']
+	brokenlog = f"{os.environ['NZBPP_DIRECTORY']}/_brokenlog.txt"
 	if os.path.exists(brokenlog):
 		text += '\n\nBrokenlog:\n' + open(brokenlog, 'r').read().strip()
 
@@ -283,7 +287,7 @@ try:
 
 	smtp.quit()
 except Exception as err:
-	print('[ERROR] %s' % err)
+	print(f'[ERROR] {err}')
 	sys.exit(POSTPROCESS_ERROR)
 
 # All OK, returning exit status 'POSTPROCESS_SUCCESS' (int <93>) to let NZBGet know

@@ -11,22 +11,22 @@ except ImportError:
 	from xmlrpc.client import ServerProxy # python 3
 
 nzbget_srcdir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-nzbget_maindir = nzbget_srcdir + '/tests/testdata/nzbget.temp'
-nzbget_configfile = nzbget_maindir + '/nzbget.conf'
+nzbget_maindir = f'{nzbget_srcdir}/tests/testdata/nzbget.temp'
+nzbget_configfile = f'{nzbget_maindir}/nzbget.conf'
 nzbget_rpcurl = 'http://127.0.0.1:6789/xmlrpc';
 
 exe_ext = '.exe' if os.name == 'nt' else ''
 
-nzbget_bin = nzbget_srcdir + '/nzbget' + exe_ext
-nserv_datadir = nzbget_srcdir + '/tests/testdata/nserv.temp'
+nzbget_bin = f'{nzbget_srcdir}/nzbget{exe_ext}'
+nserv_datadir = f'{nzbget_srcdir}/tests/testdata/nserv.temp'
 
 sevenzip_bin = distutils.spawn.find_executable('7z')
 if sevenzip_bin is None:
-	sevenzip_bin = nzbget_srcdir + '/7z' + exe_ext
+	sevenzip_bin = f'{nzbget_srcdir}/7z{exe_ext}'
 
 par2_bin = distutils.spawn.find_executable('par2')
 if par2_bin is None:
-	par2_bin = nzbget_srcdir + '/par2' + exe_ext
+	par2_bin = f'{nzbget_srcdir}/par2{exe_ext}'
 
 has_failures = False
 
@@ -42,15 +42,21 @@ def check_config():
 	global nzbget_bin
 	nzbget_bin = pytest.config.getini('nzbget_bin')
 	if not os.path.exists(nzbget_bin):
-		pytest.exit('Could not find nzbget binary at ' + nzbget_bin + '. Alternative path can be set via pytest ini option "nzbget_bin".')
+		pytest.exit(
+			f'Could not find nzbget binary at {nzbget_bin}. Alternative path can be set via pytest ini option "nzbget_bin".'
+		)
 
 	global sevenzip_bin, par2_bin
 	sevenzip_bin = pytest.config.getini('sevenzip_bin')
 	par2_bin = pytest.config.getini('par2_bin')
 	if not os.path.exists(sevenzip_bin):
-		pytest.exit('Could not find 7-zip binary in search path or at ' + sevenzip_bin + '. Alternative path can be set via pytest ini option "sevenzip_bin".')
+		pytest.exit(
+			f'Could not find 7-zip binary in search path or at {sevenzip_bin}. Alternative path can be set via pytest ini option "sevenzip_bin".'
+		)
 	if not os.path.exists(par2_bin):
-		pytest.exit('Could not find par2 binary in search path or at ' + par2_bin + '. Alternative path can be set via pytest ini option "par2_bin".')
+		pytest.exit(
+			f'Could not find par2 binary in search path or at {par2_bin}. Alternative path can be set via pytest ini option "par2_bin".'
+		)
 
 	global nserv_datadir
 	nserv_datadir = pytest.config.getini('nserv_datadir')
@@ -58,7 +64,7 @@ def check_config():
 	global nzbget_maindir
 	nzbget_maindir = pytest.config.getini('nzbget_maindir')
 	global nzbget_configfile
-	nzbget_configfile = nzbget_maindir + '/nzbget.conf'
+	nzbget_configfile = f'{nzbget_maindir}/nzbget.conf'
 
 pytest.check_config = check_config
 
@@ -103,11 +109,11 @@ class Nzbget:
 		completed = False
 		while not completed:
 			try:
-				if os.path.exists(nzbget_maindir + '.old'):
-					shutil.rmtree(nzbget_maindir + '.old')
+				if os.path.exists(f'{nzbget_maindir}.old'):
+					shutil.rmtree(f'{nzbget_maindir}.old')
 				if os.path.exists(nzbget_maindir):
-					os.rename(nzbget_maindir, nzbget_maindir + '.old')
-					shutil.rmtree(nzbget_maindir + '.old')
+					os.rename(nzbget_maindir, f'{nzbget_maindir}.old')
+					shutil.rmtree(f'{nzbget_maindir}.old')
 				completed = True
 			except Exception:
 				if attempt > 20:
@@ -119,14 +125,14 @@ class Nzbget:
 		self.remove_tempdir()
 		os.makedirs(nzbget_maindir)
 		config = open(nzbget_configfile, 'w')
-		config.write('MainDir=' + nzbget_maindir + '\n')
+		config.write(f'MainDir={nzbget_maindir}' + '\n')
 		config.write('DestDir=${MainDir}/complete\n')
 		config.write('InterDir=${MainDir}/intermediate\n')
 		config.write('TempDir=${MainDir}/temp\n')
 		config.write('QueueDir=${MainDir}/queue\n')
 		config.write('NzbDir=${MainDir}/nzb\n')
 		config.write('LogFile=${MainDir}/nzbget.log\n')
-		config.write('SevenZipCmd=' + sevenzip_bin + '\n')
+		config.write(f'SevenZipCmd={sevenzip_bin}' + '\n')
 		config.write('WriteLog=append\n')
 		config.write('DetailTarget=log\n')
 		config.write('InfoTarget=log\n')
@@ -141,8 +147,8 @@ class Nzbget:
 		config.write('WriteBuffer=1024\n')
 		config.write('NzbDirInterval=0\n')
 		config.write('FlushQueue=no\n')
-		config.write('WebDir=' + nzbget_srcdir + '/webui\n')
-		config.write('ConfigTemplate=' + nzbget_srcdir + '/nzbget.conf\n')
+		config.write(f'WebDir={nzbget_srcdir}' + '/webui\n')
+		config.write(f'ConfigTemplate={nzbget_srcdir}' + '/nzbget.conf\n')
 		config.write('ControlUsername=\n')
 		config.write('ControlPassword=\n')
 		config.write('ControlIP=127.0.0.1\n')
@@ -161,7 +167,7 @@ class Nzbget:
 	def wait_until_started(self):
 		print('Waiting for nzbget to start')
 		stat = None
-		for x in range(0, 3):
+		for _ in range(3):
 			try:
 				stat = self.api.status()
 			except Exception:
@@ -182,20 +188,17 @@ class Nzbget:
 		return self.api.append(nzb_name, nzbcontent64, 'test', 0, False, False, dupekey, dupescore, dupemode, params)
 
 	def load_nzb(self, nzb_name):
-		fullfilename = nserv_datadir + '/' + nzb_name
-		in_file = open(fullfilename, 'r')
+		fullfilename = f'{nserv_datadir}/{nzb_name}'
+		with open(fullfilename, 'r') as in_file:
+			nzbcontent = in_file.read()
 
-		nzbcontent = in_file.read()
-
-		in_file.close()
 		return nzbcontent
 
 	def download_nzb(self, nzb_name, nzb_content = None, unpack = None, dupekey = '', dupescore = 0, dupemode = 'FORCE', params = None):
 		if not nzb_content:
 			nzb_content = self.load_nzb(nzb_name)
 		self.append_nzb(nzb_name, nzb_content, unpack, dupekey, dupescore, dupemode, params)
-		hist = self.wait_nzb(nzb_name)
-		return hist
+		return self.wait_nzb(nzb_name)
 
 	def wait_nzb(self, nzb_name):
 		print('Waiting for download completion')
